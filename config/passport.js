@@ -4,39 +4,50 @@ const LocalStrategy = require('passport-local').Strategy
 
 module.exports = (passport, db) => {
 	passport.use(new LocalStrategy((username, password, cb) => {
-		db.query('SELECT id, username, password, type FROM users WHERE username=$1', [username], (err, result) => {
-			if(err) {
-				winston.error('Error when selecting user on login', err)
-				return cb(err)
+		
+		db.users.findOne({
+			where: {
+			  username: username
 			}
+		  }).then(function(results){
 
-			if(result.rows.length > 0) {
-				const first = result.rows[0]
-				bcrypt.compare(password, first.password, function(err, res) {
+			if(results !== null) {
+				//const first = result.rows[0]
+				bcrypt.compare(password, results.password, function(err, res) {
 					if(res) {
-						cb(null, { id: first.id, username: first.username, type: first.type })
+						console.log("found user");
+						console.log(results.id)
+						cb(null, { id: results.id, username: results.username, type: results.type })
 					} else {
+						console.log("did not find user");
 						cb(null, false)
 					}
 				})
 			} else {
+				console.log("did not find user");
 				cb(null, false)
 			}
-		})
+		  
+		  })//end of promise
 	}))
 
 	passport.serializeUser((user, done) => {
+		console.log("serializing user: Id:")
+		console.log(user.id)
 		done(null, user.id)
 	})
 
 	passport.deserializeUser((id, cb) => {
-		db.query('SELECT id, username, type FROM users WHERE id = $1', [parseInt(id, 10)], (err, results) => {
-			if(err) {
-				winston.error('Error when selecting user on session deserialize', err)
+		
+
+		db.users.findById(id).then(function(results){
+			if (results == null)
+			{
 				return cb(err)
 			}
-
-			cb(null, results.rows[0])
-		})
+			
+			console.log(results.dataValues)
+			cb(null, results.dataValues)
+		} )
 	})
 }

@@ -1,25 +1,21 @@
-const pg = require('pg')
-const config = require('../config')
-const winston = require('winston')
+var Sequelize = require('sequelize');
+const sequelize = new Sequelize('postgres://localhost:5432/seqClass');
 
-const dbConfig = {
-	user: config.db.user,
-	password: config.db.password,
-	database: config.db.database,
-	host: config.db.host,
-	port: config.db.port,
-	max: config.db.max,
-	idleTimeoutMillis: config.db.idleTimeoutMillis,
-}
+const models = {
+    post: sequelize.import('./post'),
+    comment: sequelize.import('./comment'),
+    users: sequelize.import('./users')
+    
+};
 
-const pool = new pg.Pool(dbConfig)
-pool.on('error', function (err) {
-	winston.error('idle client error', err.message, err.stack)
-})
 
-module.exports = {
-	pool,
-	query: (text, params, callback) => {
-		return pool.query(text, params, callback)
-	}
-}
+Object.keys(models).forEach(modelName => {
+  if (models[modelName].associate) {
+    models[modelName].associate(models);
+  }
+});
+
+models.sequelize = sequelize;
+models.Sequelize = Sequelize;
+
+module.exports =  models;

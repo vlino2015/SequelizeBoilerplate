@@ -1,8 +1,10 @@
 module.exports = {
 	login: (req, res) => {
-		const { user } = req
+		 const { user } = req
 
-		res.json(user)
+		 res.json(user)
+
+		//res.render('login')
 	},
 
 	logout: (req, res, next) => {

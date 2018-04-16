@@ -1,18 +1,22 @@
-const path = require('path')
-const bodyParser = require('body-parser')
-const express = require('express')
-const expressHandlebars = require('express-handlebars')
-const expressValidator = require('express-validator')
-const session = require('express-session')
-const pgSession = require('connect-pg-simple')(session)
-const cookieParser = require('cookie-parser')
-const methodOverride = require('method-override')
-const morgan = require('morgan')
-const winston = require('winston')
-const config = require('./')
+const path = require('path');
+const bodyParser = require('body-parser');
+const express = require('express');
+const expressEJS = require('ejs');
+const expressValidator = require('express-validator');
+var Sequelize = require('sequelize');
+
+const session = require('express-session');
+var SequelizeStore = require('connect-session-sequelize')(session.Store);
+var connection = new Sequelize('postgres://localhost:5432/seqClass');
+const cookieParser = require('cookie-parser');
+
+
+const winston = require('winston');
+const config = require('./'); //requires the index file
 
 const env = process.env.NODE_ENV || 'development'
 
+//this entire function gets passed back
 module.exports = (app, passport, pool) => {
 	let log = 'dev'
 	if (env !== 'development') {
@@ -23,36 +27,39 @@ module.exports = (app, passport, pool) => {
 		}
 	}
 
-	if (env !== 'test') app.use(morgan(log))
+	
 
-	app.engine('handlebars', expressHandlebars())
+	//pass to express object my templating engine
+	
 	app.set('views', path.join(config.root, 'views'))
-	app.set('view engine', 'handlebars')
+	app.set('view engine', 'ejs')
 
+	//body parser used for parsing information in header files
 	app.use(bodyParser.json())
 	app.use(bodyParser.urlencoded({ extended: true }))
 	app.use(expressValidator())
 
-	app.use(methodOverride(function (req) {
-		if (req.body && typeof req.body === 'object' && '_method' in req.body) {
-			var method = req.body._method
-			delete req.body._method
-			return method
-		}
-	}))
+	
 
+	var myStore = new SequelizeStore({
+		db: connection
+	})
+	//setting session information
 	app.use(cookieParser())
 	app.use(session({
-		store: new pgSession({
-			pool
-		}),
+		store: myStore,
 		secret: config.session_secret,
 		resave: false,
 		cookie: { maxAge: 14 * 24 * 60 * 60 * 1000 }
 	}))
 
-	app.use(passport.initialize())
-	app.use(passport.session())
+	//inside of my express object, I have to pass my passport object and session
+	app.use(passport.initialize()); 
+	app.use(passport.session());
 
+	myStore.sync();
+	// continue as normal
+
+	//public assets
 	app.use('/', express.static(path.join(config.root, 'public')))
 }
