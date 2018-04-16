@@ -3,7 +3,7 @@ const passport = require('passport'); //only one instance of passport
 const winston = require('winston');
 const db = require('./db'); //only one instance of database
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 9000;
 const app = express();
 
 //no need to declare variable because not going to use it for anything else,
